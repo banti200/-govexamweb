@@ -25,4 +25,74 @@ if(location.pathname.endsWith('exam.html')){
 if(location.pathname.endsWith('result.html')){const last=JSON.parse(sessionStorage.getItem('govt_last_result')||'null');if(!last){location.href='index.html'}document.getElementById('resName').innerText=last.name;document.getElementById('resDomain').innerText=last.domain.replace(/_/g,' ');document.getElementById('resScore').innerText=last.score+' / '+(last.total*POINT_CORRECT);const pct=Math.max(0,Math.round((last.score/(last.total*POINT_CORRECT))*100));document.getElementById('finalBar').style.width=pct+'%';const msg=pct>=80?'Excellent — you are well-prepared for the exam.':pct>=50?'Good — keep practicing.':'Work harder — focus on basics and practice more.';document.getElementById('resMsg').innerText=msg;document.getElementById('retry').addEventListener('click',()=>location.href='exam.html');document.getElementById('logout').addEventListener('click',()=>{sessionStorage.removeItem('govt_current');location.href='index.html'});document.getElementById('getCert').addEventListener('click',()=>location.href='certificate.html')}
 
 /* Certificate page */
-if(location.pathname.endsWith('certificate.html')){const last=JSON.parse(sessionStorage.getItem('govt_last_result')||'null');const certText=document.getElementById('certText');const name=localStorage.getItem('studentName')||(last&&last.name)||'Student Name';const domain=localStorage.getItem('examDomain')||(last&&last.domain)||'Domain';const score=localStorage.getItem('examScore')||(last&&last.score)||0;const date=last&&last.date?new Date(last.date).toLocaleDateString():new Date().toLocaleDateString();if(!last){certText.innerText='No recent result found.'}else{certText.innerHTML=`This is proudly presented to <b>${name}</b><br/>for successfully completing the <b>Nayan Govt Exam</b><br/>Subject: <b>${domain.replace(/_/g,' ')}</b> &nbsp; | &nbsp; Score: <b>${score}</b> &nbsp; | &nbsp; Date: <b>${date}</b>`}document.getElementById('downloadPdf').addEventListener('click',async()=>{const{jsPDF}=window.jspdf;const node=document.querySelector('.certificate-box');const canvas=await html2canvas(node,{scale:2,useCORS:true,backgroundColor:null});const img=canvas.toDataURL('image/png');const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[canvas.width,canvas.height]});pdf.addImage(img,'PNG',0,0,canvas.width,canvas.height);pdf.save((name?name.replace(/[^A-Za-z0-9 ]/g,''):'certificate')+'-certificate.pdf')});document.getElementById('printBtn').addEventListener('click',()=>window.print())}
+document.addEventListener("DOMContentLoaded", () => {
+  // 🟢 Data load karaycha
+  const last = JSON.parse(sessionStorage.getItem("govt_last_result") || "null");
+  const name = localStorage.getItem("studentName") || (last && last.name) || "Student";
+  const domain = localStorage.getItem("examDomain") || localStorage.getItem("selectedSubject") || (last && last.domain) || "Exam";
+  const score = localStorage.getItem("examScore") || localStorage.getItem("studentScore") || (last && last.score) || "0";
+  const date = last && last.date
+    ? new Date(last.date).toLocaleDateString()
+    : new Date().toLocaleDateString();
+
+  // 🟢 Certificate text
+  const certText = document.getElementById("certText");
+  if (!last) {
+    certText.innerText = "No recent result found.";
+  } else {
+    certText.innerHTML = `
+      This is proudly presented to <b>${name}</b><br/>
+      for successfully completing the <b>Nayan Govt Exam</b><br/>
+      Subject: <b>${domain.replace(/_/g, " ")}</b> &nbsp; | &nbsp;
+      Score: <b>${score}</b> &nbsp; | &nbsp;
+      Date: <b>${date}</b>
+    `;
+  }
+
+  // 🟢 Download PDF button
+  document.getElementById("downloadPdf").addEventListener("click", async () => {
+    const { jsPDF } = window.jspdf;
+    const node = document.querySelector(".certificate-box") || document.querySelector(".card");
+
+    const canvas = await html2canvas(node, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null
+    });
+
+    const img = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "px",
+      format: [canvas.width, canvas.height]
+    });
+
+    pdf.addImage(img, "PNG", 0, 0, canvas.width, canvas.height);
+    pdf.save((name ? name.replace(/[^A-Za-z0-9 ]/g, "") : "certificate") + "-certificate.pdf");
+
+    // 🟢 Student data Google Sheet madhe save karaycha
+    const studentData = {
+      name: name,
+      domain: domain,
+      score: score,
+      date: date,
+      certificate: "Downloaded"
+    };
+
+    fetch("https://script.google.com/macros/s/AKfycbztDQCRpb0z-TaRfPPhJQfGlTWUAd0718pRhNqgQeyzepMtErS30G8Fn8bMK81ryMNRAg/exec", {
+  method: "POST",
+  body: JSON.stringify(studentData)
+
+
+    })
+      .then(res => res.text())
+      .then(msg => console.log("✅ Saved to Google Sheet:", msg))
+      .catch(err => console.error("❌ Error saving to Sheet:", err));
+  });
+
+  // 🟢 Print button
+  document.getElementById("printBtn").addEventListener("click", () => {
+    window.print();
+  });
+});
